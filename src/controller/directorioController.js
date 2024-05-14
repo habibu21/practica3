@@ -1,4 +1,5 @@
 const pool = require("../model/directorio");
+require("dotenv").config();
 
 class DirectorioController {
 
@@ -17,10 +18,19 @@ class DirectorioController {
         try {
             const { name, emails } = req.body;
             const newDirectorio = await pool.query(
-                'INSERT INTO directorios (name, emails) VALUES ($1, $2) RETURNING *',
-                [name, emails]
+                `INSERT INTO directorio (dire_name) VALUES ('${name}') RETURNING *`
             );
-            res.json(newDirectorio.rows[0]);
+            const newEmails = [];
+            for (const email of emails) {
+                const newEmail = await pool.query(
+                    `insert into email (email_address, fk_directorio) values ('${email}', '${newDirectorio.rows[0].dire_id}')  returning *`
+                );
+                newEmails.push(newEmail.rows[0].email_address);
+            }
+            res.json({
+                name:newDirectorio.rows[0].dire_name,
+                emails:newEmails
+            });
         } catch (err) {
             res.status(500).send({
                 message: err.message || "Error al realizar la creación del directorio"
@@ -29,23 +39,43 @@ class DirectorioController {
     }
 
     async findAll(req, res) {
-        const { limit = 10, offset = 0 } = req.query;
+        const limit = process.env.LIMIT;
+        const page = req.query.page ? req.query.page : 1;
         try {
-            const directorios = await pool.query('SELECT * FROM directorios LIMIT $1 OFFSET $2', [limit, offset]);
-            res.json(directorios.rows);
+            const directorios = await pool.query(`SELECT * FROM directorio LIMIT ${limit} OFFSET ${limit}*(${page}-1)`);
+            let i = 0;
+            let response = {
+                count: 0,
+                results:[]
+            };
+            for (const directorio of directorios.rows) {
+                response.results[i] = {
+                    id: directorio.dire_id,
+                    name: directorio.dire_name
+                }
+                const emails = await pool.query(`select email_address from email where fk_directorio = '${directorio.dire_id}'`);
+                response.results[i].emails = emails.rows;
+                i++
+            }
+            response.count = response.results.length;
+            res.json(response);
         } catch (err) {
-            res.status(500).send({ message: 'Error al realizar la búsqueda' });
+            res.status(500).send({ message: 'Error al realizar la búsqueda'});
         }
     }
 
     async findOne(req, res) {
         const id = req.params.id;
         try {
-            const directorio = await pool.query('SELECT * FROM directorios WHERE id = $1', [id]);
+            const directorio = await pool.query(`SELECT * FROM directorio WHERE dire_id = ${id}`);
+            let response = {};
             if (directorio.rows.length === 0) {
                 res.status(404).send({ message: `Directorio con ID ${id} no encontrado` });
             } else {
-                res.json(directorio.rows[0]);
+                response.name = directorio.rows[0].dire_name;
+                const emails = await pool.query(`select email_address from email where fk_directorio = '${directorio.rows[0].dire_id}'`);
+                response.emails = emails.rows;
+                res.json(response);
             }
         } catch (err) {
             res.status(500).send({
@@ -77,7 +107,8 @@ class DirectorioController {
     async delete(req, res) {
         const id = req.params.id;
         try {
-            const deletedDirectorio = await pool.query('DELETE FROM directorios WHERE id = $1 RETURNING *', [id]);
+            await pool.query(`Delete from email where fk_directorio = ${id}`);
+            const deletedDirectorio = await pool.query(`DELETE FROM directorio WHERE dire_id = ${id} RETURNING *`);
             if (deletedDirectorio.rows.length === 0) {
                 res.status(404).send({ message: `No se pudo borrar el Directorio con ID ${id}` });
             } else {

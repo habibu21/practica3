@@ -3,3 +3,4 @@ DB_HOST=https://example.com
 DB_DATABASE=database
 DB_PASSWORD=1234
 DB_PORT=5432
+LIMIT=5
