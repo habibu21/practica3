@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node app.js",
+    "start": "pm2 start app.js",
     "dev": "nodemon .app"
   },
   "keywords": [],
@@ -14,7 +14,8 @@
   "dependencies": {
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "pg": "^8.11.5"
+    "pg": "^8.11.5",
+    "pm2": "^5.3.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"

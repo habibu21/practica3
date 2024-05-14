@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN npm install
+RUN npm install &&
+    npm install pm2 -g
 
 CMD ["node", "start"]
